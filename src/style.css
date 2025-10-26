@@ -12,3 +12,7 @@ canvas {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
   background-color: white;
 }
+
+.selectedTool {
+  outline: 2px solid black;
+}

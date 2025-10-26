@@ -16,6 +16,21 @@ ctx.lineCap = "round";
 ctx.lineJoin = "round";
 ctx.lineWidth = 2;
 
+let currentThickness = 2;
+const THIN = 2;
+const THICK = 8;
+
+const thinButton = document.createElement("button");
+thinButton.textContent = "Thin";
+
+const thickButton = document.createElement("button");
+thickButton.textContent = "Thick";
+
+function updateToolSelection() {
+  thinButton.classList.toggle("selectedTool", currentThickness === THIN);
+  thickButton.classList.toggle("selectedTool", currentThickness === THICK);
+}
+
 type Pt = { x: number; y: number };
 
 interface DisplayCommand {
@@ -87,7 +102,7 @@ redoButton.textContent = "Redo";
 const clearBtn = document.createElement("button");
 clearBtn.textContent = "Clear";
 
-controls.append(undoButton, redoButton, clearBtn);
+controls.append(undoButton, redoButton, clearBtn, thinButton, thickButton);
 
 const updateButtonStates = () => {
   undoButton.disabled = displayList.length === 0;
@@ -106,7 +121,10 @@ canvas.addEventListener("mousedown", (e) => {
   cursor.x = e.offsetX;
   cursor.y = e.offsetY;
 
-  currentCommand = new LineCommand({ x: cursor.x, y: cursor.y }, 2);
+  currentCommand = new LineCommand(
+    { x: cursor.x, y: cursor.y },
+    currentThickness,
+  );
   displayList.push(currentCommand);
   redoStack.length = 0;
   dispatchChanged();
@@ -148,6 +166,16 @@ clearBtn.addEventListener("click", () => {
   displayList.length = 0;
   redoStack.length = 0;
   dispatchChanged();
+});
+
+thinButton.addEventListener("click", () => {
+  currentThickness = THIN;
+  updateToolSelection();
+});
+
+thickButton.addEventListener("click", () => {
+  currentThickness = THICK;
+  updateToolSelection();
 });
 
 dispatchChanged();
