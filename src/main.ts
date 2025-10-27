@@ -29,6 +29,14 @@ thickButton.textContent = "Thick";
 function updateToolSelection() {
   thinButton.classList.toggle("selectedTool", currentThickness === THIN);
   thickButton.classList.toggle("selectedTool", currentThickness === THICK);
+  canvas.dispatchEvent(new Event("tool-moved"));
+}
+
+function makeMarkerPreview(): Preview {
+  return new MarkerPreview(
+    () => ({ x: cursor.x, y: cursor.y }),
+    () => currentThickness,
+  );
 }
 
 type Pt = { x: number; y: number };
@@ -40,6 +48,12 @@ interface DisplayCommand {
 interface Draggable {
   drag(x: number, y: number): void;
 }
+
+interface Preview {
+  draw(ctx: CanvasRenderingContext2D): void;
+}
+
+let preview: Preview | null = null;
 
 class LineCommand implements DisplayCommand, Draggable {
   private points: Pt[] = [];
@@ -72,17 +86,34 @@ class LineCommand implements DisplayCommand, Draggable {
   }
 }
 
+class MarkerPreview implements Preview {
+  constructor(private getPos: () => Pt, private getWidth: () => number) {}
+
+  draw(ctx: CanvasRenderingContext2D) {
+    const p = this.getPos();
+    const r = Math.max(1, this.getWidth() / 2);
+
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 const displayList: DisplayCommand[] = [];
 let currentCommand: (DisplayCommand & Draggable) | null = null;
 const redoStack: DisplayCommand[] = [];
 
 const dispatchChanged = () => {
-  canvas.dispatchEvent(new Event("drawing-changed"));
+  canvas.dispatchEvent(new Event("tool-moved"));
 };
 
 const redraw = () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const cmd of displayList) cmd.display(ctx);
+  if (!cursor.active && preview) preview.draw(ctx);
 };
 
 const controls = document.createElement("div");
@@ -128,25 +159,38 @@ canvas.addEventListener("mousedown", (e) => {
   displayList.push(currentCommand);
   redoStack.length = 0;
   dispatchChanged();
+  preview = null;
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (!cursor.active || !currentCommand) return;
-  const x = e.offsetX;
-  const y = e.offsetY;
-  currentCommand.drag(x, y);
+  const x = e.offsetX, y = e.offsetY;
   cursor.x = x;
   cursor.y = y;
-  dispatchChanged();
+
+  if (!cursor.active) {
+    canvas.dispatchEvent(new Event("tool-moved"));
+    return;
+  }
+
+  if (currentCommand) {
+    currentCommand.drag(x, y);
+    dispatchChanged();
+  }
 });
 
 const endStroke = () => {
   cursor.active = false;
   currentCommand = null;
+  canvas.dispatchEvent(new Event("tool-moved"));
 };
 
 canvas.addEventListener("mouseup", endStroke);
 canvas.addEventListener("mouseleave", endStroke);
+
+canvas.addEventListener("tool-moved", () => {
+  preview = makeMarkerPreview();
+  redraw();
+});
 
 undoButton.addEventListener("click", () => {
   if (displayList.length === 0) return;
@@ -171,11 +215,13 @@ clearBtn.addEventListener("click", () => {
 thinButton.addEventListener("click", () => {
   currentThickness = THIN;
   updateToolSelection();
+  canvas.dispatchEvent(new Event("tool-moved"));
 });
 
 thickButton.addEventListener("click", () => {
   currentThickness = THICK;
   updateToolSelection();
+  canvas.dispatchEvent(new Event("tool-moved"));
 });
 
 dispatchChanged();
