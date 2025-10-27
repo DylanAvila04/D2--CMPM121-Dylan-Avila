@@ -20,6 +20,13 @@ let currentThickness = 2;
 const THIN = 2;
 const THICK = 8;
 
+type Tool = "marker" | "sticker";
+let currentTool: Tool = "marker";
+
+const STICKERS = ["🙌", "😎", "👾"];
+let selsectedSticker = STICKERS[0];
+let stickerSize = 32;
+
 const thinButton = document.createElement("button");
 thinButton.textContent = "Thin";
 
@@ -102,6 +109,49 @@ class MarkerPreview implements Preview {
   }
 }
 
+class StickerPreview implements Preview {
+  constructor(
+    private getPos: () => Pt,
+    private getEmoji: () => string,
+    private getSize: () => number,
+  ) {}
+
+  draw(ctx: CanvasRenderingContext2D) {
+    const p = this.getPos();
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font =
+      "${this.size}px system-ui, Congrats Emoji, Cool emoji, alien emoji";
+    ctx.fillText(this.getEmoji(), p.x, p.y);
+    ctx.restore();
+  }
+}
+
+class StickerCommand implements DisplayCommand, Draggable {
+  constructor(
+    public x: number,
+    public y: number,
+    private emoji: string,
+    private size: number,
+  ) {}
+
+  drag(x: number, y: number): void {
+    this.x = x;
+    this.y = y;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "${this.size}px system-ui, sans-serif";
+    ctx.fillText(this.emoji, this.x, this.y);
+    ctx.restore();
+  }
+}
+
 const displayList: DisplayCommand[] = [];
 let currentCommand: (DisplayCommand & Draggable) | null = null;
 const redoStack: DisplayCommand[] = [];
@@ -151,15 +201,25 @@ canvas.addEventListener("mousedown", (e) => {
   cursor.active = true;
   cursor.x = e.offsetX;
   cursor.y = e.offsetY;
+  preview = null;
 
-  currentCommand = new LineCommand(
-    { x: cursor.x, y: cursor.y },
-    currentThickness,
-  );
+  if (currentTool === "marker") {
+    currentCommand = new LineCommand(
+      { x: cursor.x, y: cursor.y },
+      currentThickness,
+    );
+  } else {
+    currentCommand = new StickerCommand(
+      cursor.x,
+      cursor.y,
+      selsectedSticker,
+      stickerSize,
+    );
+  }
+
   displayList.push(currentCommand);
   redoStack.length = 0;
   dispatchChanged();
-  preview = null;
 });
 
 canvas.addEventListener("mousemove", (e) => {
@@ -187,8 +247,30 @@ const endStroke = () => {
 canvas.addEventListener("mouseup", endStroke);
 canvas.addEventListener("mouseleave", endStroke);
 
+const stickerBar = document.createElement("div");
+for (const s of STICKERS) {
+  const b = document.createElement("button");
+  b.textContent = s;
+  b.addEventListener("click", () => {
+    currentTool = "sticker";
+    selsectedSticker = s;
+    canvas.dispatchEvent(new Event("tool-moved"));
+    updateToolSelection();
+  });
+  stickerBar.append(b);
+}
+controls.prepend(stickerBar);
+
 canvas.addEventListener("tool-moved", () => {
-  preview = makeMarkerPreview();
+  if (currentTool === "marker") {
+    preview = makeMarkerPreview();
+  } else {
+    preview = new StickerPreview(
+      () => ({ x: cursor.x, y: cursor.y }),
+      () => selsectedSticker,
+      () => stickerSize,
+    );
+  }
   redraw();
 });
 
@@ -213,12 +295,14 @@ clearBtn.addEventListener("click", () => {
 });
 
 thinButton.addEventListener("click", () => {
+  currentTool = "marker";
   currentThickness = THIN;
   updateToolSelection();
   canvas.dispatchEvent(new Event("tool-moved"));
 });
 
 thickButton.addEventListener("click", () => {
+  currentTool = "marker";
   currentThickness = THICK;
   updateToolSelection();
   canvas.dispatchEvent(new Event("tool-moved"));
