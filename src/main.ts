@@ -25,7 +25,7 @@ let currentTool: Tool = "marker";
 
 const STICKERS = ["🙌", "😎", "👾"];
 let selsectedSticker = STICKERS[0];
-let stickerSize = 32;
+const stickerSize = 32;
 
 const thinButton = document.createElement("button");
 thinButton.textContent = "Thin";
