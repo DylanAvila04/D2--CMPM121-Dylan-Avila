@@ -27,6 +27,35 @@ const STICKERS = ["🙌", "😎", "👾"];
 let selsectedSticker = STICKERS[0];
 const stickerSize = 32;
 
+function renderStickerBar() {
+  stickerBar.innerHTML = "";
+  for (const s of STICKERS) {
+    const b = document.createElement("button");
+    b.textContent = s;
+    b.addEventListener("click", () => {
+      currentTool = "sticker";
+      selsectedSticker = s;
+      canvas.dispatchEvent(new Event("tool-moved"));
+      updateToolSelection();
+    });
+    stickerBar.append(b);
+  }
+
+  const addBtn = document.createElement("button");
+  addBtn.textContent = " + Custom";
+  addBtn.addEventListener("click", () => {
+    const t = prompt("Custom Sticker text", "⭐️");
+    if (!t) return;
+    const trimmed = t.slice(0, 4);
+    STICKERS.push(trimmed);
+    selsectedSticker = trimmed;
+    currentTool = "sticker";
+    renderStickerBar();
+    canvas.dispatchEvent(new Event("tool-moved"));
+  });
+  stickerBar.append(addBtn);
+}
+
 const thinButton = document.createElement("button");
 thinButton.textContent = "Thin";
 
@@ -123,7 +152,7 @@ class StickerPreview implements Preview {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font =
-      "${this.size}px system-ui, Congrats Emoji, Cool emoji, alien emoji";
+      "${this.getSize()}px system-ui, Congrats Emoji, Cool emoji, alien emoji";
     ctx.fillText(this.getEmoji(), p.x, p.y);
     ctx.restore();
   }
@@ -146,7 +175,7 @@ class StickerCommand implements DisplayCommand, Draggable {
     ctx.save();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "${this.size}px system-ui, sans-serif";
+    ctx.font = `${this.size}px system-ui, sans-serif`;
     ctx.fillText(this.emoji, this.x, this.y);
     ctx.restore();
   }
@@ -248,18 +277,8 @@ canvas.addEventListener("mouseup", endStroke);
 canvas.addEventListener("mouseleave", endStroke);
 
 const stickerBar = document.createElement("div");
-for (const s of STICKERS) {
-  const b = document.createElement("button");
-  b.textContent = s;
-  b.addEventListener("click", () => {
-    currentTool = "sticker";
-    selsectedSticker = s;
-    canvas.dispatchEvent(new Event("tool-moved"));
-    updateToolSelection();
-  });
-  stickerBar.append(b);
-}
 controls.prepend(stickerBar);
+renderStickerBar();
 
 canvas.addEventListener("tool-moved", () => {
   if (currentTool === "marker") {
