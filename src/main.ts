@@ -17,15 +17,15 @@ ctx.lineJoin = "round";
 ctx.lineWidth = 2;
 
 let currentThickness = 2;
-const THIN = 2;
-const THICK = 8;
+const THIN = 3;
+const THICK = 10;
 
 type Tool = "marker" | "sticker";
 let currentTool: Tool = "marker";
 
 const STICKERS = ["🙌", "😎", "👾"];
 let selsectedSticker = STICKERS[0];
-const stickerSize = 32;
+const stickerSize = 20;
 
 function renderStickerBar() {
   stickerBar.innerHTML = "";
