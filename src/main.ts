@@ -195,6 +195,10 @@ const redraw = () => {
   if (!cursor.active && preview) preview.draw(ctx);
 };
 
+function renderAll(ctx2: CanvasRenderingContext2D) {
+  for (const cmd of displayList) cmd.display(ctx2);
+}
+
 const controls = document.createElement("div");
 controls.style.display = "grid";
 controls.style.gridAutoFlow = "column";
@@ -213,6 +217,32 @@ const clearBtn = document.createElement("button");
 clearBtn.textContent = "Clear";
 
 controls.append(undoButton, redoButton, clearBtn, thinButton, thickButton);
+
+const exportBtn = document.createElement("button");
+exportBtn.textContent = "Export PNG";
+controls.append(exportBtn);
+
+exportBtn.addEventListener("click", () => {
+  const scale = 4;
+  const off = document.createElement("canvas");
+  off.width = canvas.width * scale;
+  off.height = canvas.height * scale;
+  const octx = off.getContext("2d");
+  if (!octx) return;
+
+  octx.fillStyle = "white";
+  octx.fillRect(0, 0, off.width, off.height);
+
+  octx.save();
+  octx.scale(scale, scale);
+  renderAll(octx);
+  octx.restore();
+
+  const a = document.createElement("a");
+  a.href = off.toDataURL("image/png");
+  a.download = "sketchpad.png";
+  a.click();
+});
 
 const updateButtonStates = () => {
   undoButton.disabled = displayList.length === 0;
